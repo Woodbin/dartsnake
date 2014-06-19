@@ -1,18 +1,14 @@
 import 'dart:html';
 import 'dart:math';
+import 'dart:collection';
 
 CanvasElement platno;           //Naše plátno
 CanvasRenderingContext2D ctx;
 const int velikost=15;          //Velikost políčka na hrací ploše
 Hlava hlava = new Hlava();      //Náš snejk
 Stopwatch stopky = new Stopwatch();
-int rychlost = 400;          //Počáteční rychlost pohybu
-List<Clanek> ocas= new List<Clanek>();
-List<Clanek> mazanejOcas = new List<Clanek>();
-List<Jidlo> vecere = new List<Jidlo>();
-List<Jidlo> mazanaVecere = new List<Jidlo>();
-bool konecHry=false;
-
+int rychlost = 1000;          //Počáteční rychlost pohybu
+Queue<Clanek> ocas = new Queue<Clanek>();
 /**Hlavní metoda
  * 
  */
@@ -27,8 +23,8 @@ void main() {
  */
 void init(){
   stopky.start();
+  ctx.fillStyle="white";
   ctx.beginPath();
-  ctx.fillStyle="grey";
   ctx.fillRect(0, 0, platno.width, platno.height);
   ctx.fill();
   window.onKeyDown.listen(zpracujKlavesu);      //zaveď event pro klávesu
@@ -51,13 +47,8 @@ void draw(){
   ctx.fillRect(0,0,platno.width,platno.height);
   ctx.fill();
   hlava.vykresliSe(ctx);
-  vecere.forEach((jidlo)=> jidlo.vykresliSe(ctx));
-  ocas.forEach((clanek) => clanek.vykresliSe(ctx));
-  if (!konecHry) window.requestAnimationFrame(loop);
-  else {
-    ctx.fillStyle= 'black';
-    ctx.fillText("Konec Hry!", 300, 300);
-  }
+  ocas.forEach((clanek)=> clanek.vykresliSe(ctx));
+  window.requestAnimationFrame(loop);
 }
 
 /**
@@ -66,36 +57,18 @@ void draw(){
 void loop(num _){
   if ( stopky.elapsedMilliseconds>rychlost){    //Zpracuj pohyb jen pokud uběhl žádaný čas
     hlava.pohyb();
-    vecere.forEach((jidlo){
-      if (jidlo.kolizniTest(hlava)){
-        hlava.delka+=1;
-        ocas.forEach((clanek)=> clanek.zivoty+=1);
-        mazanaVecere.add(jidlo);
-      }
-    });
     
+    bool smaz = false;
     ocas.forEach((clanek){
-      if (clanek.kolizniTest(hlava)){
-        konecHry=true;
+      if(!clanek.zije()){
+       smaz=true;
       }
     });
-    ocas.forEach((clanek){
-      if (!clanek.zije()){
-        mazanejOcas.add(clanek);
-      }
-    });
-    mazanejOcas.forEach((clanek)=> ocas.remove(clanek));
-    mazanejOcas.clear();
-    mazanaVecere.forEach((jidlo)=> vecere.remove(jidlo));
-    mazanaVecere.clear();
-    if (vecere.length<3) Jidlo jidlo = new Jidlo();
-    
+    if(smaz) ocas.removeLast();
     stopky.reset(); //vynuluj stopky
   }
-  
   draw();
 }
-
 
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 /**
@@ -113,7 +86,6 @@ abstract class HerniObjekt{
     Rectangle tento = new Rectangle(x, y, velikost, velikost);
     Rectangle tamten = new Rectangle(_obj.x, _obj.y, velikost, velikost);
     return tento.containsRectangle(tamten);
-    
   }
   
   void znicSe(){
@@ -167,18 +139,14 @@ class Hlava extends HerniObjekt{
    int docasneX=x;
    int docasneY=y;
    switch (smer){
-     case 3: x -= velikost; if (x<0) x=585;break;
-     case 0: y -= velikost; if (y<0) y=585;break;
-     case 1: x += velikost; if (x>585) x=0;break;
-     case 2: y += velikost; if (y>585) y=0;break;
+     case 3: x -= velikost; break;
+     case 0: y -= velikost; break;
+     case 1: x += velikost; break;
+     case 2: y += velikost; break;
    }
    
    Clanek clanek = new Clanek(docasneX,docasneY,delka);
-   ocas.add(clanek);
- }
- 
- void prodluzSe(){
-   
+   ocas.addFirst(clanek);
  }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -191,21 +159,17 @@ class Clanek extends HerniObjekt{
    y = _y;
    zivoty = _zivoty;
  }
+ 
+ 
  bool zije(){
-   if ( zivoty > 1) {
+   if ( zivoty > 1){
      zivoty -= 1;
      return true;
-     }
+   }
    else return false;
  }
 }
 //~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 class Jidlo extends HerniObjekt{
-  Jidlo(){
-     var random = new Random();
-     x= random.nextInt(39)*15;
-     y= random.nextInt(39)*15;
-     barva = "blue";
-     vecere.add(this);
-  }
+  
 }
